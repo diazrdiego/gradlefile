@@ -64,3 +64,56 @@ class ProjectVersion {
 	}
 	
 }
+
+class ReleaseVersionTask extends DefaultTask {
+	@Input Boolean release
+	@OutputFile File destFile
+	
+	ReleaseVersionTask() {
+		group = 'Version'
+		description = 'Change project type to release'
+	}
+	
+	@TaskAction
+	void start() {
+		project.version.release = true
+		ant.propertyfile(file: project.versionFile) {
+			entry(
+				key: 'release', 
+				type: 'string', 
+				operation: '=', 
+				value: 'true')
+		}
+	}
+}
+
+task makeReleaseVersion(type: ReleaseVersionTask) {
+	release = project.version.release
+	destFile = project.versionFile
+}
+/*
+task makeReleaseVersion(group: 'Version', description: 'Makes project a release version') {
+	version.release = true
+	
+	inputs.property('release', version.release)
+	outputs.file versionFile
+	
+	ant.propertyfile(file: versionFile) {
+		entry(
+			key: 'release', 
+			type: 'string', 
+			operation: '=', 
+			value: 'true')
+	}
+}
+*/
+task makeSnapshotVersion(group: 'Version', description: 'Makes project a snapshot version') {
+	version.release = false
+	
+	inputs.property('release', version.release)
+	outputs.file versionFile
+	
+	ant.propertyfile(file: versionFile) {
+		entry(key: 'release', type: 'string', operation: '=', value: 'false')
+	}
+}
