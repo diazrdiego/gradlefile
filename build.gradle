@@ -1,3 +1,5 @@
+apply plugin: 'war'
+
 version = new ProjectVersion(0, 1)
 
 ext.versionFile = file('version.properties')
@@ -117,3 +119,65 @@ task makeSnapshotVersion(group: 'Version', description: 'Makes project a snapsho
 		entry(key: 'release', type: 'string', operation: '=', value: 'false')
 	}
 }
+
+task createDistribution(type: Zip, dependsOn: makeReleaseVersion){
+	from war.outputs.files
+	
+	from (sourceSets*.allSource){
+		into 'src'
+	}
+	
+	from (rootDir){
+		include versionFile.name
+	}
+}
+
+task backupDistribution(type: Copy){
+	from createDistribution.outputs.files
+	into "$buildDir/backup"
+}
+
+tasks.addRule("Pattern: (in|de)crement<Classifier>Version - increments the project version classifier"){
+	String taskname ->
+
+	String operacion
+
+		if(taskname.startsWith("increment") && taskname.endsWith("Version")){
+			operacion="+"
+		}
+		else if(taskname.startsWith("decrement") && taskname.endsWith("Version")){
+			operacion="-"
+		}
+
+		if(operacion != null){
+			task(taskname)<<{
+				String classifier=(taskname - 'increment' - 'Version')
+				String currentVersion = version.toString()
+
+				switch(classifier){
+					case 'Major': operacion=="+" ? ++version.major : --version.major; break;
+					case 'Minor': operacion=="+" ? ++version.minor : --version.minor; break;
+					default: throw new GradleException("Classifier must be 'Major' or 'Minor'.");
+				}
+
+				String newVersion = version.toString()
+
+				println "Incremented version from ${currentVersion} to ${newVersion}"
+
+				ant.propertyfile(file: project.versionFile) {
+					entry(
+						key: classifier.toLowerCase(), 
+						type: 'int', 
+						operation: operacion, 
+						value: 1)
+				}
+
+			}
+
+		}
+}
+
+
+
+
+
